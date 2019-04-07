@@ -1,0 +1,11 @@
+\.DS_Store
+*.metals
+*.bloop
+*.vscode
+*.idea
+*.code-workspace
+*/tmp
+/project/project/target/
+/project/target/
+/target/
+*last.json

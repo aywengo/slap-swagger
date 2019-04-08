@@ -1,0 +1,9 @@
+version: '3'
+services:
+  slap:
+    image: slap-swagger:0.1.1
+    restart: always
+    environment:
+      SLAP_URL: "${SLAP_URL?URL of the tracking API}"
+      SLAP_INTERVAL: ${PAYROLL_BRANCH:-30}
+      SLAP_SLACK_URL: "${SLAP_SLACK_URL:-localhost}"

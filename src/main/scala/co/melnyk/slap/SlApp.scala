@@ -22,6 +22,5 @@ object SlApp extends App with LazyLogging {
       Await.ready(Faultfinder.go(Config.url), 5 minutes)
     )
 
-  StdIn.readLine()
-  system.terminate()
+  Await.result(system.whenTerminated, Duration.Inf)
 }

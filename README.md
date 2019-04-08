@@ -26,6 +26,14 @@ SLAP_SLACK_URL - incomming webhook in Slack.
 
 > sbt docker:publishLocal
 
+Launch container with default settings:
+
+> docker run --rm slap-swagger:0.1.1
+
+or define some and run:
+
+> SLAP_URL=http://localhost:8080/api-docs/swagger.json docker-compose up  
+
 ## TODO
 
 * switch to [quarz scheduler](https://github.com/enragedginger/akka-quartz-scheduler)

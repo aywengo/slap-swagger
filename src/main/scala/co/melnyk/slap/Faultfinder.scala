@@ -85,7 +85,7 @@ object Faultfinder extends LazyLogging {
   ): EitherT[Future, String, String] =
     EitherT(
       Future(
-        Try(JsonMergeDiff.diff(before, actual))
+        Try(JsonDiff.diff(before, actual, remember = true))
           .fold(
             {
               case parsingError: io.circe.ParsingFailure =>
@@ -93,18 +93,18 @@ object Faultfinder extends LazyLogging {
               case NonFatal(e) => Left(s"Comparision error: $e")
             },
             diff =>
-              if (diff == JsonMergePatch.Object(Map())) Right("No changes so far.")
+              if (diff.ops.isEmpty) Right("No changes so far.")
               else Left(diff.toString)
           )
       )
     )
 
-  private def readFromFile(fileName: String) = {
+  private def readFromFile(fileName: String): Either[String, String] = {
     val bufferedSource = Source.fromFile(fileName)
     try {
       Right(bufferedSource.getLines.mkString)
     } catch {
-      case e: Exception => Left(s"IO error during reading old doc file: $e")
+      case NonFatal(e) => Left(s"IO error during reading old doc file: $e")
     } finally {
       bufferedSource.close
     }
@@ -116,8 +116,15 @@ object Faultfinder extends LazyLogging {
     val message = printer
       .pretty(
         Payload(
-          text = "Tracked API status:",
-          attachments = Some(immutable.Seq(Attachment(text = msg)))
+          attachments = Some(
+            immutable.Seq(
+              Attachment(
+                text = msg,
+                pretext = Some(Config.url),
+                title = Some("Tracked API status:")
+              )
+            )
+          )
         ).asJson
       )
 
@@ -132,7 +139,7 @@ object Faultfinder extends LazyLogging {
 }
 
 case class Payload(
-    text: String,
+    text: Option[String] = None,
     channel: Option[String] = None,
     username: Option[String] = None,
     icon_url: Option[String] = None,

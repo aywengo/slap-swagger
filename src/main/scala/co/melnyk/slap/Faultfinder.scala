@@ -3,6 +3,7 @@ package co.melnyk.slap
 import com.softwaremill.sttp._
 import com.typesafe.scalalogging._
 import scala.concurrent.{Future, ExecutionContext}
+import scala.collection.immutable
 import scala.io.Source
 import scala.util.Try
 
@@ -14,6 +15,8 @@ import gnieh.diffson.circe._
 
 import io.circe._
 import io.circe.parser._
+import io.circe.generic.auto._
+import io.circe.syntax._
 
 import cats.data.EitherT
 import cats.implicits._
@@ -74,7 +77,7 @@ object Faultfinder extends LazyLogging {
     } else {
       // the first comparison
       saveFile(content) match {
-        case Right(_) => Left(s"New api-doc has been saved!")
+        case Right(_) => Left(s"New api-doc has been saved! Let's wait for changes.")
         case Left(e) => Left(e)
       }
     }
@@ -91,12 +94,43 @@ object Faultfinder extends LazyLogging {
   )
 
   private def pushToSlack(msg: String): Unit = {
-    logger.warn(s"Slack => $msg")
+    val printer = Printer.noSpaces.copy(dropNullValues = true)
 
-    // TODO: https://api.slack.com/incoming-webhooks#posting_with_webhooks
-    // sttp
-    // .body(msg)
-    // .post(uri"${Config.slackUrl}")
-    // .send()
+    val message = printer
+      .pretty(
+        Payload(text = "SL API status:", 
+          attachments = Some(immutable.Seq(
+            Attachment(text = msg)))).asJson)
+
+    logger.warn(s"Slack => ${message}")
+
+    sttp
+    .header("Content-type", "application/json")
+    .body(message)
+    .post(uri"${Config.slackUrl}")
+    .send()
   }
 }
+
+case class Payload(
+  text: String,
+  channel: Option[String] = None,
+  username: Option[String] = None,
+  icon_url: Option[String] = None,
+  icon_emoji: Option[String] = None,
+  attachments: Option[Seq[Attachment]] = None
+)
+
+case class Attachment(
+  title: Option[String] = None,
+  text: String,
+  fallback: Option[String] = None,
+  image_url: Option[String] = None,
+  thumb_url: Option[String] = None,
+  title_link: Option[String] = None,
+  color: Option[String] = None,
+  pretext: Option[String] = None,
+  author_name: Option[String] = None,
+  author_link: Option[String] = None,
+  author_icon: Option[String] = None
+)

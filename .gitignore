@@ -4,7 +4,7 @@
 *.vscode
 *.idea
 *.code-workspace
-*/tmp
+/tmp/*
 /project/project/target/
 /project/target/
 /target/

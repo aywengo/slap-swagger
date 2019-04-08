@@ -11,6 +11,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= akka ++
       circe ++
       difson ++
+      logger ++
       Seq(
         scalaTest % Test,
         typesafeconfig,

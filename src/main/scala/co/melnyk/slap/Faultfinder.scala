@@ -1,7 +1,7 @@
 package co.melnyk.slap
 
 import com.softwaremill.sttp._
-
+import com.typesafe.scalalogging._
 import scala.concurrent.{Future, ExecutionContext}
 import scala.io.Source
 import scala.util.Try
@@ -18,7 +18,7 @@ import io.circe.parser._
 import cats.data.EitherT
 import cats.implicits._
 
-object Faultfinder {
+object Faultfinder extends LazyLogging {
 
   implicit val lcs = new Patience[Json]
   implicit val backend = HttpURLConnectionBackend()
@@ -34,7 +34,7 @@ object Faultfinder {
     } yield diff)
       .fold(
         pushToSlack,
-        pr => println(s"${Calendar.getInstance().getTime} - $pr")
+        logger.debug(_)
       )
   }
 
@@ -85,13 +85,13 @@ object Faultfinder {
     (implicit ec: ExecutionContext): EitherT[Future, String, String] = EitherT(Future(
     Try(JsonMergeDiff.diff(before, actual))
       .fold(e => Left(s"Comparision error: $e"),
-        diff => if (!diff.toJson.isArray) Right("No changes so far.") else Left(diff.toString)
+        diff => if (diff == JsonMergePatch.Object(Map())) Right("No changes so far.") else Left(diff.toString)
       )
   )
   )
 
   private def pushToSlack(msg: String): Unit = {
-    println(s"Slack => $msg")
+    logger.warn(s"Slack => $msg")
 
     // TODO: https://api.slack.com/incoming-webhooks#posting_with_webhooks
     // sttp

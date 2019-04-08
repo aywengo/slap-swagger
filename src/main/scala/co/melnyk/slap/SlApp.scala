@@ -11,7 +11,7 @@ object SlApp extends App with LazyLogging {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  logger.info(s"Starting to keep track of api-doc on URL ${Config.url} every ${Config.interval} min.\n" +
+  logger.info(s"Starting to keep track on api-doc at ${Config.url} every ${Config.interval} min.\n" +
     "Press [Ctrl+C] to stop and exit.")
 
   val system = ActorSystem("SlapSystem")

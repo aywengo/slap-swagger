@@ -20,8 +20,7 @@ SLAP_URL - url to the api-doc. Has to be in JSON.
 
 SLAP_INTERVAL - in minutes.
 
-SLAP_SLACK_URL - incomming webhook in Slack. 
-
+SLAP_SLACK_URL - incomming webhook in Slack.
 
 ## Docker image
 

@@ -5,6 +5,7 @@ import com.typesafe.scalalogging._
 import scala.concurrent.{Future, ExecutionContext}
 import scala.collection.immutable
 import scala.io.Source
+import scala.util.control.NonFatal
 import scala.util.Try
 
 import java.util.Calendar
@@ -31,9 +32,9 @@ object Faultfinder extends LazyLogging {
   def go(url: String)(implicit ec: ExecutionContext): Future[Unit] = {
     (for {
       actual <- fetchFile(uri"$url")
-      stored <- syncAndSaveTheDoc(actual)
-      _ = saveFile(actual)
+      stored <- readTheLastSaved(actual)
       diff <- compare(actual, stored)
+      _ = saveFile(actual)
     } yield diff)
       .fold(
         pushToSlack,
@@ -61,19 +62,10 @@ object Faultfinder extends LazyLogging {
     Try(reflect.io.File(tmpFileName).writeAll(content))
       .fold(e => Left(s"IO error during saving the file: $e"), _ => Right(()))
 
-  private def syncAndSaveTheDoc(content: String)
+  private def readTheLastSaved(content: String)
     (implicit ec: ExecutionContext): EitherT[Future, String, String] = EitherT(Future {
     if (Files.exists(Paths.get(tmpFileName))) {
-      val bufferedSource = Source.fromFile(tmpFileName)
-      try {
-        Right(bufferedSource.getLines.mkString)
-      }
-      catch {
-        case e: Exception => Left(s"IO error during reading old doc file: $e")
-      }
-      finally {
-        bufferedSource.close
-      }
+      readFromFile(tmpFileName)
     } else {
       // the first comparison
       saveFile(content) match {
@@ -87,18 +79,33 @@ object Faultfinder extends LazyLogging {
   private def compare(actual: String, before: String)
     (implicit ec: ExecutionContext): EitherT[Future, String, String] = EitherT(Future(
     Try(JsonMergeDiff.diff(before, actual))
-      .fold(e => Left(s"Comparision error: $e"),
+      .fold({
+        case parsingError: io.circe.ParsingFailure => Left(s"Could not parse due to an error $parsingError:\n$actual")
+        case NonFatal(e) => Left(s"Comparision error: $e")
+      },
         diff => if (diff == JsonMergePatch.Object(Map())) Right("No changes so far.") else Left(diff.toString)
       )
-  )
-  )
+  ))
+
+  private def readFromFile(fileName: String) = {
+    val bufferedSource = Source.fromFile(fileName)
+    try {
+        Right(bufferedSource.getLines.mkString)
+    }
+    catch {
+      case e: Exception => Left(s"IO error during reading old doc file: $e")
+     }
+    finally {
+       bufferedSource.close
+    }
+  }
 
   private def pushToSlack(msg: String): Unit = {
     val printer = Printer.noSpaces.copy(dropNullValues = true)
 
     val message = printer
       .pretty(
-        Payload(text = "SL API status:", 
+        Payload(text = "Tracked API status:", 
           attachments = Some(immutable.Seq(
             Attachment(text = msg)))).asJson)
 

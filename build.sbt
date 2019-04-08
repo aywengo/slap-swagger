@@ -21,4 +21,6 @@ lazy val root = (project in file("."))
 
 enablePlugins(JavaServerAppPackaging)
 
+scalafmtOnCompile := true
+
 mainClass in Compile := Some("co.melnyk.slap.SlApp")

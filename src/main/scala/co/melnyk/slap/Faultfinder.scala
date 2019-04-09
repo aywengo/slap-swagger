@@ -34,10 +34,10 @@ object Faultfinder extends LazyLogging {
       actual <- fetchFile(uri"$url")
       stored <- readTheLastSaved(actual)
       diff <- compare(actual, stored)
-      _ = saveFile(actual)
+      _ = IO.Helper.saveFile(tmpFileName, actual)
     } yield diff)
       .fold(
-        pushToSlack,
+        Slack.Helper.pushToSlack,
         logger.debug(_)
       )
   }
@@ -61,24 +61,10 @@ object Faultfinder extends LazyLogging {
       )
     )
 
-  private def saveFile(content: String)(implicit ec: ExecutionContext): Either[String, Unit] =
-    Try(reflect.io.File(tmpFileName).writeAll(content))
-      .fold(e => Left(s"IO error during saving the file: $e"), _ => Right(()))
-
   private def readTheLastSaved(
       content: String
   )(implicit ec: ExecutionContext): EitherT[Future, String, String] =
-    EitherT(Future {
-      if (Files.exists(Paths.get(tmpFileName))) {
-        readFromFile(tmpFileName)
-      } else {
-        // the first comparison
-        saveFile(content) match {
-          case Right(_) => Left(s"New api-doc has been saved! Let's wait for changes.")
-          case Left(e)  => Left(e)
-        }
-      }
-    })
+    EitherT(IO.Helper.readAndOverride(tmpFileName, content))
 
   private def compare(actual: String, before: String)(
       implicit ec: ExecutionContext
@@ -98,65 +84,4 @@ object Faultfinder extends LazyLogging {
           )
       )
     )
-
-  private def readFromFile(fileName: String): Either[String, String] = {
-    val bufferedSource = Source.fromFile(fileName)
-    try {
-      Right(bufferedSource.getLines.mkString)
-    } catch {
-      case NonFatal(e) => Left(s"IO error during reading old doc file: $e")
-    } finally {
-      bufferedSource.close
-    }
-  }
-
-  private def pushToSlack(msg: String): Unit = {
-    val printer = Printer.noSpaces.copy(dropNullValues = true)
-
-    val message = printer
-      .pretty(
-        Payload(
-          attachments = Some(
-            immutable.Seq(
-              Attachment(
-                text = msg,
-                pretext = Some(Config.url),
-                title = Some("Tracked API status:")
-              )
-            )
-          )
-        ).asJson
-      )
-
-    logger.warn(s"Slack => ${message}")
-
-    sttp
-      .header("Content-type", "application/json")
-      .body(message)
-      .post(uri"${Config.slackUrl}")
-      .send()
-  }
 }
-
-case class Payload(
-    text: Option[String] = None,
-    channel: Option[String] = None,
-    username: Option[String] = None,
-    icon_url: Option[String] = None,
-    icon_emoji: Option[String] = None,
-    attachments: Option[Seq[Attachment]] = None
-)
-
-case class Attachment(
-    title: Option[String] = None,
-    text: String,
-    fallback: Option[String] = None,
-    image_url: Option[String] = None,
-    thumb_url: Option[String] = None,
-    title_link: Option[String] = None,
-    color: Option[String] = None,
-    pretext: Option[String] = None,
-    author_name: Option[String] = None,
-    author_link: Option[String] = None,
-    author_icon: Option[String] = None
-)

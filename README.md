@@ -32,7 +32,9 @@ Launch container with default settings:
 
 or define some and run:
 
-> SLAP_URL=http://localhost:8080/api-docs/swagger.json docker-compose up  
+```bash
+SLAP_URL="http://localhost:8080/api-docs/swagger.json" docker-compose up
+```
 
 ## TODO
 

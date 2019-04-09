@@ -11,5 +11,6 @@ case class Attachment(
     pretext: Option[String] = None,
     author_name: Option[String] = None,
     author_link: Option[String] = None,
-    author_icon: Option[String] = None
+    author_icon: Option[String] = None,
+    mrkdwn_in: Option[List[String]] = Some(List("text", "pretext"))
 )

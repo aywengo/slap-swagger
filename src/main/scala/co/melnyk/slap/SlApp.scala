@@ -2,7 +2,6 @@ package co.melnyk.slap
 
 import akka.actor.ActorSystem
 import com.typesafe.scalalogging._
-import scala.io.StdIn
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor }

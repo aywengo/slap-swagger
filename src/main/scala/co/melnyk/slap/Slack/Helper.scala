@@ -4,7 +4,6 @@ import com.softwaremill.sttp._
 import com.typesafe.scalalogging._
 
 import io.circe._
-import io.circe.parser._
 import io.circe.generic.auto._
 import io.circe.syntax._
 
@@ -15,7 +14,7 @@ import scala.collection.immutable
 
 object Helper extends LazyLogging {
 
-  implicit val backend = HttpURLConnectionBackend()
+  implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
 
   def pushToSlack(msg: String): Unit = {
     val printer = Printer.noSpaces.copy(dropNullValues = true)
@@ -27,6 +26,7 @@ object Helper extends LazyLogging {
             immutable.Seq(
               Attachment(
                 text = msg,
+                color = Some("warning"),
                 pretext = Some(Config.url),
                 title = Some(extractNameFromUrl(Config.url))
               )
@@ -35,7 +35,7 @@ object Helper extends LazyLogging {
         ).asJson
       )
 
-    logger.warn(s"Slack => ${message}")
+    logger.warn(s"Slack => $message")
 
     sttp
       .header("Content-type", "application/json")
@@ -48,7 +48,11 @@ object Helper extends LazyLogging {
     val pattern = """^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)""".r
 
     pattern
-      .findFirstIn(url)
+      .findAllIn(url)
+      .matchData
+      .map(_.group(1))
+      .toSeq
+      .headOption
       .map(found => s"API status on $found :")
       .getOrElse("Tracked API status:")
   }

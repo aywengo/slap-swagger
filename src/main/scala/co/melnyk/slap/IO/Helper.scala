@@ -1,6 +1,8 @@
 package co.melnyk.slap.IO
 
 import java.nio.file.{ Files, Paths }
+import java.text.SimpleDateFormat
+
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.io.Source
 import scala.util.control.NonFatal
@@ -37,4 +39,10 @@ object Helper {
         }
       }
     }
+
+  def timestamp: String = {
+    val ts = System.currentTimeMillis()
+    val df: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+    df.format(ts)
+  }
 }
